@@ -6,14 +6,16 @@ import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import com.example.expensetracker.R
+import com.example.expensetracker.data.AppPrefs
 
 class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Terapkan preferensi dark mode dari awal, biar nggak ada "kedip" tema salah
+        AppPrefs.applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        // Tunggu 1.5 detik, terus pindah ke MainActivity
         Handler(Looper.getMainLooper()).postDelayed({
             startActivity(Intent(this, MainActivity::class.java))
             finish()

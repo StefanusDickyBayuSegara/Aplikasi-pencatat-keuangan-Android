@@ -19,6 +19,44 @@
             android:gravity="center"
             android:text="Rp 0" />
 
+        <!-- Filter bulan -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bulan:"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="8dp" />
+
+            <Spinner
+                android:id="@+id/spMonthFilter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/btnSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:padding="4dp"
+                android:text="⚙️"
+                android:textSize="20sp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
         <!-- Bagian grafik pie chart, otomatis sembunyi kalau belum ada pengeluaran -->
         <LinearLayout
             android:id="@+id/llChartSection"
@@ -72,7 +110,7 @@
                 android:layout_height="match_parent"
                 android:padding="8dp" />
 
-            <!-- Empty state, muncul kalau belum ada transaksi -->
+            <!-- Empty state, muncul kalau belum ada transaksi (di bulan yang dipilih) -->
             <LinearLayout
                 android:id="@+id/layoutEmpty"
                 android:layout_width="wrap_content"
@@ -90,6 +128,7 @@
                     android:gravity="center" />
 
                 <TextView
+                    android:id="@+id/tvEmptyTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"

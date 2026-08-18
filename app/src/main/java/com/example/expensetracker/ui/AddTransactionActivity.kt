@@ -10,6 +10,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.example.expensetracker.R
+import com.example.expensetracker.data.AppPrefs
+import com.example.expensetracker.data.Categories
 import com.example.expensetracker.viewmodel.TransactionViewModel
 
 class AddTransactionActivity : AppCompatActivity() {
@@ -17,16 +19,8 @@ class AddTransactionActivity : AppCompatActivity() {
     private lateinit var viewModel: TransactionViewModel
     private lateinit var spCategory: Spinner
 
-    // Daftar kategori. Bisa ditambah/diedit sesuka kamu.
-    private val expenseCategories = listOf(
-        "Makan", "Transport", "Belanja", "Hiburan",
-        "Tagihan", "Kesehatan", "Pendidikan", "Lainnya"
-    )
-    private val incomeCategories = listOf(
-        "Gaji", "Hadiah", "Investasi", "Lainnya"
-    )
-
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppPrefs.applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_transaction)
 
@@ -39,14 +33,13 @@ class AddTransactionActivity : AppCompatActivity() {
         val btnSave: Button = findViewById(R.id.btnSave)
 
         // Default: kategori pengeluaran (karena radio default-nya "Pengeluaran")
-        setCategoryAdapter(expenseCategories)
+        setCategoryAdapter(Categories.EXPENSE)
 
-        // Ganti isi dropdown kategori sesuai tipe yang dipilih
         rgType.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.rbIncome) {
-                setCategoryAdapter(incomeCategories)
+                setCategoryAdapter(Categories.INCOME)
             } else {
-                setCategoryAdapter(expenseCategories)
+                setCategoryAdapter(Categories.EXPENSE)
             }
         }
 
