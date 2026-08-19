@@ -4,10 +4,14 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -35,15 +39,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var llChartSection: LinearLayout
     private lateinit var llLegend: LinearLayout
     private lateinit var pieChartView: PieChartView
+    private lateinit var llTrendSection: LinearLayout
+    private lateinit var barChartView: BarChartView
     private lateinit var spMonthFilter: Spinner
+    private lateinit var etSearch: EditText
+    private lateinit var recyclerView: RecyclerView
 
-    // key format "yyyy-MM", "ALL" berarti semua bulan
     private var selectedMonthKey: String = "ALL"
+    private var searchQuery: String = ""
     private var fullTransactionList: List<Transaction> = emptyList()
     private var currentMonthKeys: List<String> = emptyList()
 
     private val monthKeyFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val monthLabelFormat = SimpleDateFormat("MMMM yyyy", Locale("in", "ID"))
+    private val monthShortFormat = SimpleDateFormat("MMM", Locale("in", "ID"))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppPrefs.applyTheme(this)
@@ -56,14 +65,13 @@ class MainActivity : AppCompatActivity() {
         llChartSection = findViewById(R.id.llChartSection)
         llLegend = findViewById(R.id.llLegend)
         pieChartView = findViewById(R.id.pieChartView)
+        llTrendSection = findViewById(R.id.llTrendSection)
+        barChartView = findViewById(R.id.barChartView)
         spMonthFilter = findViewById(R.id.spMonthFilter)
-        val recyclerView: RecyclerView = findViewById(R.id.rvTransactions)
+        etSearch = findViewById(R.id.etSearch)
+        recyclerView = findViewById(R.id.rvTransactions)
         val fab: FloatingActionButton = findViewById(R.id.fabAdd)
         val btnSettings: TextView = findViewById(R.id.btnSettings)
-
-        btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
 
         adapter = TransactionAdapter { transaction ->
             viewModel.deleteTransaction(transaction)
@@ -80,11 +88,26 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                searchQuery = s?.toString()?.trim() ?: ""
+                applyFilterAndRender()
+            }
+        })
+
+        btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+        }
+
         viewModel = ViewModelProvider(this)[TransactionViewModel::class.java]
 
         viewModel.allTransactions.observe(this) { transactions ->
             fullTransactionList = transactions
             updateMonthSpinner(transactions)
+            updateTrendChart(transactions)
             applyFilterAndRender()
         }
 
@@ -95,17 +118,16 @@ class MainActivity : AppCompatActivity() {
 
         fab.setOnClickListener {
             startActivity(Intent(this, AddTransactionActivity::class.java))
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
     }
 
-    /** Bangun ulang isi dropdown bulan berdasarkan bulan-bulan yang ada di data transaksi */
     private fun updateMonthSpinner(transactions: List<Transaction>) {
         val newMonthKeys = transactions
             .map { monthKeyFormat.format(Date(it.date)) }
             .distinct()
             .sortedDescending()
 
-        // Kalau daftar bulan nggak berubah, nggak usah bangun ulang adapter (biar posisi pilihan nggak reset)
         if (newMonthKeys == currentMonthKeys) return
         currentMonthKeys = newMonthKeys
 
@@ -115,11 +137,10 @@ class MainActivity : AppCompatActivity() {
             monthLabelFormat.format(date)
         })
 
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spMonthFilter.adapter = adapter
+        val monthAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels)
+        monthAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spMonthFilter.adapter = monthAdapter
 
-        // Kalau bulan yang lagi dipilih masih ada di daftar baru, pertahankan pilihannya
         val indexToSelect = if (selectedMonthKey == "ALL") 0
         else {
             val idx = newMonthKeys.indexOf(selectedMonthKey)
@@ -128,19 +149,56 @@ class MainActivity : AppCompatActivity() {
         spMonthFilter.setSelection(indexToSelect)
     }
 
-    /** Filter list transaksi sesuai bulan terpilih, lalu render list, empty state, dan pie chart */
+    /** Grafik tren: total pengeluaran per bulan, maksimal 6 bulan terakhir */
+    private fun updateTrendChart(transactions: List<Transaction>) {
+        val monthlyTotals = transactions
+            .filter { it.type == "expense" }
+            .groupBy { monthKeyFormat.format(Date(it.date)) }
+            .mapValues { entry -> entry.value.sumOf { it.amount }.toFloat() }
+            .toList()
+            .sortedBy { it.first }
+            .takeLast(6)
+
+        if (monthlyTotals.size < 2) {
+            llTrendSection.visibility = View.GONE
+            return
+        }
+
+        llTrendSection.visibility = View.VISIBLE
+        val chartData = monthlyTotals.map { (key, value) ->
+            val date = monthKeyFormat.parse(key) ?: Date()
+            monthShortFormat.format(date) to value
+        }
+        barChartView.setData(chartData)
+    }
+
     private fun applyFilterAndRender() {
-        val filtered = if (selectedMonthKey == "ALL") {
+        var filtered = if (selectedMonthKey == "ALL") {
             fullTransactionList
         } else {
             fullTransactionList.filter { monthKeyFormat.format(Date(it.date)) == selectedMonthKey }
         }
 
-        adapter.submitList(filtered)
+        if (searchQuery.isNotEmpty()) {
+            filtered = filtered.filter {
+                it.category.contains(searchQuery, ignoreCase = true) ||
+                    (it.note?.contains(searchQuery, ignoreCase = true) == true)
+            }
+        }
+
+        adapter.submitList(filtered) {
+            // Animasi jatuh pas list ke-render ulang
+            recyclerView.layoutAnimation = AnimationUtils.loadLayoutAnimation(this, R.anim.layout_animation_fall_down)
+            recyclerView.scheduleLayoutAnimation()
+        }
 
         if (filtered.isEmpty()) {
             layoutEmpty.visibility = View.VISIBLE
-            tvEmptyTitle.text = if (selectedMonthKey == "ALL") "Belum ada transaksi" else "Nggak ada transaksi di bulan ini"
+            tvEmptyTitle.text = when {
+                searchQuery.isNotEmpty() -> "Nggak ketemu hasil pencarian"
+                selectedMonthKey != "ALL" -> "Nggak ada transaksi di bulan ini"
+                else -> "Belum ada transaksi"
+            }
         } else {
             layoutEmpty.visibility = View.GONE
         }
@@ -165,7 +223,6 @@ class MainActivity : AppCompatActivity() {
         llLegend.removeAllViews()
         val total = data.sumOf { it.second.toDouble() }.toFloat()
         val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
-
         val budgetEnabled = AppPrefs.isBudgetEnabled(this)
 
         data.forEachIndexed { index, (category, value) ->
@@ -189,7 +246,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Cek budget limit (kalau fiturnya diaktifkan)
             val limit = if (budgetEnabled) AppPrefs.getBudgetLimit(this, category) else 0f
             val overBudget = budgetEnabled && limit > 0f && value > limit
 
@@ -207,5 +263,10 @@ class MainActivity : AppCompatActivity() {
             row.addView(label)
             llLegend.addView(row)
         }
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
     }
 }

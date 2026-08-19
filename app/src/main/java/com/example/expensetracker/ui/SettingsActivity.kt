@@ -98,4 +98,9 @@ class SettingsActivity : AppCompatActivity() {
     private fun toggleBudgetListVisibility(visible: Boolean) {
         llBudgetList.visibility = if (visible) View.VISIBLE else View.GONE
     }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
+    }
 }
