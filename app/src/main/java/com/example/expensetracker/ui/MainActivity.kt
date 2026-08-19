@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.expensetracker.R
 import com.example.expensetracker.data.AppPrefs
 import com.example.expensetracker.data.Transaction
+import com.example.expensetracker.util.PdfExporter
 import com.example.expensetracker.viewmodel.TransactionViewModel
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.text.NumberFormat
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedMonthKey: String = "ALL"
     private var searchQuery: String = ""
     private var fullTransactionList: List<Transaction> = emptyList()
+    private var currentFilteredList: List<Transaction> = emptyList()
     private var currentMonthKeys: List<String> = emptyList()
 
     private val monthKeyFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
@@ -72,6 +74,16 @@ class MainActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.rvTransactions)
         val fab: FloatingActionButton = findViewById(R.id.fabAdd)
         val btnSettings: TextView = findViewById(R.id.btnSettings)
+        val btnExportPdf: TextView = findViewById(R.id.btnExportPdf)
+
+        btnExportPdf.setOnClickListener {
+            if (currentFilteredList.isEmpty()) {
+                android.widget.Toast.makeText(this, "Nggak ada transaksi buat di-export", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                val periodLabel = buildPeriodLabel()
+                PdfExporter.generateAndShare(this, currentFilteredList, periodLabel)
+            }
+        }
 
         adapter = TransactionAdapter { transaction ->
             viewModel.deleteTransaction(transaction)
@@ -217,6 +229,18 @@ class MainActivity : AppCompatActivity() {
             pieChartView.setData(expenseByCategory)
             buildLegend(expenseByCategory)
         }
+
+        currentFilteredList = filtered
+    }
+
+    private fun buildPeriodLabel(): String {
+        val base = if (selectedMonthKey == "ALL") {
+            "Semua Transaksi"
+        } else {
+            val date = monthKeyFormat.parse(selectedMonthKey) ?: Date()
+            monthLabelFormat.format(date)
+        }
+        return if (searchQuery.isNotEmpty()) "$base (pencarian: \"$searchQuery\")" else base
     }
 
     private fun buildLegend(data: List<Pair<String, Float>>) {
