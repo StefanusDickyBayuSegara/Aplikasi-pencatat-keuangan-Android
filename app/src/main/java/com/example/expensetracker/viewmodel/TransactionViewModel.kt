@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.expensetracker.data.Transaction
 import com.example.expensetracker.data.TransactionRepository
 import com.example.expensetracker.data.Wallet
+import com.example.expensetracker.widget.BalanceWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -91,6 +92,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                 )
             }
             if (walletId == currentWalletId) loadData()
+            BalanceWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
@@ -98,6 +100,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repository.delete(transaction) }
             loadData()
+            BalanceWidgetProvider.triggerUpdate(getApplication())
         }
     }
 }

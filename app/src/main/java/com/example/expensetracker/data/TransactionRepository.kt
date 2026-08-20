@@ -8,6 +8,12 @@ class TransactionRepository(context: Context) {
     private val dbHelper = DbHelper(context)
 
     // ---- Transaksi ----
+    // CATATAN: sengaja TIDAK memanggil db.close() di tiap fungsi.
+    // dbHelper.readableDatabase/writableDatabase itu koneksi yang dipakai bareng-bareng
+    // (di-cache oleh SQLiteOpenHelper). Kalau ditutup manual tiap fungsi selesai,
+    // sementara ada fungsi lain yang masih jalan bersamaan (misal loadWallets()
+    // dan loadData() jalan hampir bersamaan), koneksinya bentrok dan bikin crash
+    // "connection pool has been closed".
 
     fun insert(transaction: Transaction) {
         val db = dbHelper.writableDatabase
@@ -20,13 +26,11 @@ class TransactionRepository(context: Context) {
             put(DbHelper.COL_NOTE, transaction.note)
         }
         db.insert(DbHelper.TABLE_NAME, null, values)
-        db.close()
     }
 
     fun delete(transaction: Transaction) {
         val db = dbHelper.writableDatabase
         db.delete(DbHelper.TABLE_NAME, "${DbHelper.COL_ID} = ?", arrayOf(transaction.id.toString()))
-        db.close()
     }
 
     fun getAllTransactionsByWallet(walletId: Int): List<Transaction> {
@@ -53,7 +57,6 @@ class TransactionRepository(context: Context) {
                 )
             }
         }
-        db.close()
         return list
     }
 
@@ -85,16 +88,13 @@ class TransactionRepository(context: Context) {
                 )
             }
         }
-        db.close()
         return list
     }
 
     fun insertWallet(name: String): Long {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply { put(DbHelper.COL_WALLET_NAME, name) }
-        val id = db.insert(DbHelper.TABLE_WALLETS, null, values)
-        db.close()
-        return id
+        return db.insert(DbHelper.TABLE_WALLETS, null, values)
     }
 
     /** Hapus dompet beserta SEMUA transaksi yang ada di dalamnya */
@@ -102,6 +102,5 @@ class TransactionRepository(context: Context) {
         val db = dbHelper.writableDatabase
         db.delete(DbHelper.TABLE_NAME, "${DbHelper.COL_WALLET_ID} = ?", arrayOf(walletId.toString()))
         db.delete(DbHelper.TABLE_WALLETS, "${DbHelper.COL_WALLET_PK} = ?", arrayOf(walletId.toString()))
-        db.close()
     }
 }
