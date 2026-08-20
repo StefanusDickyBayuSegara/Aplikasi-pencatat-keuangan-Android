@@ -1,5 +1,6 @@
 package com.example.expensetracker.ui
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -22,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.expensetracker.R
 import com.example.expensetracker.data.AppPrefs
 import com.example.expensetracker.data.Transaction
+import com.example.expensetracker.data.Wallet
 import com.example.expensetracker.util.PdfExporter
 import com.example.expensetracker.viewmodel.TransactionViewModel
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -51,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private var fullTransactionList: List<Transaction> = emptyList()
     private var currentFilteredList: List<Transaction> = emptyList()
     private var currentMonthKeys: List<String> = emptyList()
+    private var walletsList: List<Wallet> = emptyList()
+    private lateinit var spWallet: Spinner
 
     private val monthKeyFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val monthLabelFormat = SimpleDateFormat("MMMM yyyy", Locale("in", "ID"))
@@ -72,6 +76,9 @@ class MainActivity : AppCompatActivity() {
         spMonthFilter = findViewById(R.id.spMonthFilter)
         etSearch = findViewById(R.id.etSearch)
         recyclerView = findViewById(R.id.rvTransactions)
+        spWallet = findViewById(R.id.spWallet)
+        val btnAddWallet: TextView = findViewById(R.id.btnAddWallet)
+        val btnDeleteWallet: TextView = findViewById(R.id.btnDeleteWallet)
         val fab: FloatingActionButton = findViewById(R.id.fabAdd)
         val btnSettings: TextView = findViewById(R.id.btnSettings)
         val btnExportPdf: TextView = findViewById(R.id.btnExportPdf)
@@ -100,6 +107,53 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+        spWallet.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val wallet = walletsList.getOrNull(position) ?: return
+                if (wallet.id != viewModel.currentWalletId) {
+                    viewModel.switchWallet(wallet.id)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        btnAddWallet.setOnClickListener {
+            val input = EditText(this)
+            input.hint = "Nama dompet (misal: Bisnis)"
+            AlertDialog.Builder(this)
+                .setTitle("Tambah Dompet Baru")
+                .setView(input)
+                .setPositiveButton("Tambah") { _, _ ->
+                    val name = input.text.toString().trim()
+                    if (name.isNotEmpty()) {
+                        viewModel.addWalletAndSwitch(name)
+                    }
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+        }
+
+        btnDeleteWallet.setOnClickListener {
+            if (walletsList.size <= 1) {
+                android.widget.Toast.makeText(this, "Minimal harus ada 1 dompet", android.widget.Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val names = walletsList.map { it.name }.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle("Pilih dompet yang mau dihapus")
+                .setItems(names) { _, which ->
+                    val wallet = walletsList[which]
+                    AlertDialog.Builder(this)
+                        .setTitle("Hapus dompet \"${wallet.name}\"?")
+                        .setMessage("Semua transaksi di dalam dompet ini juga akan ikut terhapus. Tindakan ini nggak bisa dibatalkan.")
+                        .setPositiveButton("Hapus") { _, _ -> viewModel.deleteWallet(wallet.id) }
+                        .setNegativeButton("Batal", null)
+                        .show()
+                }
+                .show()
+        }
+
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -116,6 +170,16 @@ class MainActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[TransactionViewModel::class.java]
 
+        viewModel.wallets.observe(this) { walletList ->
+            walletsList = walletList
+            val names = walletList.map { it.name }
+            val walletAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, names)
+            walletAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spWallet.adapter = walletAdapter
+            val idx = walletList.indexOfFirst { it.id == viewModel.currentWalletId }
+            if (idx >= 0) spWallet.setSelection(idx)
+        }
+
         viewModel.allTransactions.observe(this) { transactions ->
             fullTransactionList = transactions
             updateMonthSpinner(transactions)
@@ -129,7 +193,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         fab.setOnClickListener {
-            startActivity(Intent(this, AddTransactionActivity::class.java))
+            val intent = Intent(this, AddTransactionActivity::class.java)
+            intent.putExtra("wallet_id", viewModel.currentWalletId)
+            startActivity(intent)
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
         }
     }

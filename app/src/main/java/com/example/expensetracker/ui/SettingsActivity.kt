@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.expensetracker.R
 import com.example.expensetracker.data.AppPrefs
 import com.example.expensetracker.data.Categories
+import com.example.expensetracker.util.ThousandsTextWatcher
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -47,7 +48,7 @@ class SettingsActivity : AppCompatActivity() {
             AppPrefs.setBudgetEnabled(this, swBudgetEnabled.isChecked)
 
             categoryInputs.forEach { (category, editText) ->
-                val amount = editText.text.toString().toFloatOrNull() ?: 0f
+                val amount = ThousandsTextWatcher.parseRawNumber(editText.text.toString()).toFloat()
                 AppPrefs.setBudgetLimit(this, category, amount)
             }
 
@@ -85,7 +86,8 @@ class SettingsActivity : AppCompatActivity() {
                 inputType = InputType.TYPE_CLASS_NUMBER
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 val existing = AppPrefs.getBudgetLimit(this@SettingsActivity, category)
-                if (existing > 0f) setText(existing.toInt().toString())
+                if (existing > 0f) setText(ThousandsTextWatcher.formatWithDots(existing.toLong()))
+                addTextChangedListener(ThousandsTextWatcher(this))
             }
 
             categoryInputs[category] = input

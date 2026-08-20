@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.expensetracker.R
 import com.example.expensetracker.data.AppPrefs
 import com.example.expensetracker.data.Categories
+import com.example.expensetracker.util.ThousandsTextWatcher
 import com.example.expensetracker.viewmodel.TransactionViewModel
 
 class AddTransactionActivity : AppCompatActivity() {
@@ -25,8 +26,10 @@ class AddTransactionActivity : AppCompatActivity() {
         setContentView(R.layout.activity_add_transaction)
 
         viewModel = ViewModelProvider(this)[TransactionViewModel::class.java]
+        val walletId = intent.getIntExtra("wallet_id", 1)
 
         val etAmount: EditText = findViewById(R.id.etAmount)
+        etAmount.addTextChangedListener(ThousandsTextWatcher(etAmount))
         spCategory = findViewById(R.id.spCategory)
         val etNote: EditText = findViewById(R.id.etNote)
         val rgType: RadioGroup = findViewById(R.id.rgType)
@@ -53,16 +56,16 @@ class AddTransactionActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val amount = amountText.toDoubleOrNull()
-            if (amount == null) {
-                Toast.makeText(this, "Jumlah harus berupa angka", Toast.LENGTH_SHORT).show()
+            val amount = ThousandsTextWatcher.parseRawNumber(amountText)
+            if (amount <= 0.0) {
+                Toast.makeText(this, "Jumlah harus berupa angka lebih dari 0", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val selectedId = rgType.checkedRadioButtonId
             val type = if (selectedId == R.id.rbIncome) "income" else "expense"
 
-            viewModel.addTransaction(amount, category, type, note.ifBlank { null })
+            viewModel.addTransaction(walletId, amount, category, type, note.ifBlank { null })
             finish()
         }
     }

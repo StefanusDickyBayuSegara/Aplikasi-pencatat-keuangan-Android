@@ -2,6 +2,7 @@ package com.example.expensetracker.data
 
 data class Transaction(
     val id: Int = 0,
+    val walletId: Int = 1,
     val amount: Double,
     val category: String,
     val type: String, // "income" atau "expense"

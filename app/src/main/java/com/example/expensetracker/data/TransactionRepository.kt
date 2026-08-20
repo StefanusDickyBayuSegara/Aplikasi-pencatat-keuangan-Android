@@ -7,9 +7,12 @@ class TransactionRepository(context: Context) {
 
     private val dbHelper = DbHelper(context)
 
+    // ---- Transaksi ----
+
     fun insert(transaction: Transaction) {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
+            put(DbHelper.COL_WALLET_ID, transaction.walletId)
             put(DbHelper.COL_AMOUNT, transaction.amount)
             put(DbHelper.COL_CATEGORY, transaction.category)
             put(DbHelper.COL_TYPE, transaction.type)
@@ -26,11 +29,13 @@ class TransactionRepository(context: Context) {
         db.close()
     }
 
-    fun getAllTransactions(): List<Transaction> {
+    fun getAllTransactionsByWallet(walletId: Int): List<Transaction> {
         val list = mutableListOf<Transaction>()
         val db = dbHelper.readableDatabase
         val cursor = db.query(
-            DbHelper.TABLE_NAME, null, null, null, null, null,
+            DbHelper.TABLE_NAME, null,
+            "${DbHelper.COL_WALLET_ID} = ?", arrayOf(walletId.toString()),
+            null, null,
             "${DbHelper.COL_DATE} DESC"
         )
         cursor.use {
@@ -38,6 +43,7 @@ class TransactionRepository(context: Context) {
                 list.add(
                     Transaction(
                         id = it.getInt(it.getColumnIndexOrThrow(DbHelper.COL_ID)),
+                        walletId = it.getInt(it.getColumnIndexOrThrow(DbHelper.COL_WALLET_ID)),
                         amount = it.getDouble(it.getColumnIndexOrThrow(DbHelper.COL_AMOUNT)),
                         category = it.getString(it.getColumnIndexOrThrow(DbHelper.COL_CATEGORY)),
                         type = it.getString(it.getColumnIndexOrThrow(DbHelper.COL_TYPE)),
@@ -51,12 +57,51 @@ class TransactionRepository(context: Context) {
         return list
     }
 
-    fun getBalance(): Double {
-        val transactions = getAllTransactions()
+    fun getBalanceByWallet(walletId: Int): Double {
+        val transactions = getAllTransactionsByWallet(walletId)
         var balance = 0.0
         for (t in transactions) {
             balance += if (t.type == "income") t.amount else -t.amount
         }
         return balance
+    }
+
+    // ---- Dompet ----
+
+    fun getAllWallets(): List<Wallet> {
+        val list = mutableListOf<Wallet>()
+        val db = dbHelper.readableDatabase
+        val cursor = db.query(
+            DbHelper.TABLE_WALLETS, null, null, null, null, null,
+            "${DbHelper.COL_WALLET_PK} ASC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    Wallet(
+                        id = it.getInt(it.getColumnIndexOrThrow(DbHelper.COL_WALLET_PK)),
+                        name = it.getString(it.getColumnIndexOrThrow(DbHelper.COL_WALLET_NAME))
+                    )
+                )
+            }
+        }
+        db.close()
+        return list
+    }
+
+    fun insertWallet(name: String): Long {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply { put(DbHelper.COL_WALLET_NAME, name) }
+        val id = db.insert(DbHelper.TABLE_WALLETS, null, values)
+        db.close()
+        return id
+    }
+
+    /** Hapus dompet beserta SEMUA transaksi yang ada di dalamnya */
+    fun deleteWallet(walletId: Int) {
+        val db = dbHelper.writableDatabase
+        db.delete(DbHelper.TABLE_NAME, "${DbHelper.COL_WALLET_ID} = ?", arrayOf(walletId.toString()))
+        db.delete(DbHelper.TABLE_WALLETS, "${DbHelper.COL_WALLET_PK} = ?", arrayOf(walletId.toString()))
+        db.close()
     }
 }
