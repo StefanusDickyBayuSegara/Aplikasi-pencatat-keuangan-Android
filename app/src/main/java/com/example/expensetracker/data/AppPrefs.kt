@@ -12,6 +12,9 @@ object AppPrefs {
     private const val KEY_BUDGET_ENABLED = "budget_enabled"
     private const val KEY_DARK_MODE = "dark_mode_enabled"
     private const val KEY_BUDGET_PREFIX = "budget_limit_"
+    private const val KEY_REMINDER_ENABLED = "reminder_enabled"
+    private const val KEY_REMINDER_HOUR = "reminder_hour"
+    private const val KEY_REMINDER_MINUTE = "reminder_minute"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -39,6 +42,29 @@ object AppPrefs {
 
     fun setDarkModeEnabled(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_DARK_MODE, enabled).apply()
+    }
+
+    // ---- Pengingat harian ----
+
+    fun isReminderEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_REMINDER_ENABLED, false)
+
+    fun setReminderEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_REMINDER_ENABLED, enabled).apply()
+    }
+
+    /** Balikin pasangan (jam, menit), default jam 20:00 */
+    fun getReminderTime(context: Context): Pair<Int, Int> {
+        val hour = prefs(context).getInt(KEY_REMINDER_HOUR, 20)
+        val minute = prefs(context).getInt(KEY_REMINDER_MINUTE, 0)
+        return hour to minute
+    }
+
+    fun setReminderTime(context: Context, hour: Int, minute: Int) {
+        prefs(context).edit()
+            .putInt(KEY_REMINDER_HOUR, hour)
+            .putInt(KEY_REMINDER_MINUTE, minute)
+            .apply()
     }
 
     /** Panggil ini di paling awal onCreate() (SEBELUM super.onCreate/setContentView) di SETIAP Activity */
