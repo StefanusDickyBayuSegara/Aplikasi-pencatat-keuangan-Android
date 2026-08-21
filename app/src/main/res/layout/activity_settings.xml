@@ -17,6 +17,67 @@
             android:textStyle="bold"
             android:layout_marginBottom="16dp" />
 
+        <!-- Akun & Cloud Sync -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Akun"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvAccountStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Belum masuk"
+            android:textSize="13sp"
+            android:textColor="#888888"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnLoginRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Masuk / Daftar Akun" />
+
+        <LinearLayout
+            android:id="@+id/llAccountActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnBackup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="☁️ Backup ke Cloud" />
+
+            <Button
+                android:id="@+id/btnRestore"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="⬇️ Restore dari Cloud" />
+
+            <Button
+                android:id="@+id/btnLogout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Keluar Akun" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#DDDDDD"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
         <!-- Dark mode -->
         <LinearLayout
             android:layout_width="match_parent"

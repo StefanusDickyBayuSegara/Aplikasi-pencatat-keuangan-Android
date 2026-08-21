@@ -32,6 +32,14 @@
             android:name=".ui.SettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.RegisterActivity"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

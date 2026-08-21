@@ -69,6 +69,64 @@ class TransactionRepository(context: Context) {
         return balance
     }
 
+    /** Ambil SEMUA transaksi dari SEMUA dompet, dipakai buat backup ke cloud */
+    fun getAllTransactionsAllWallets(): List<Transaction> {
+        val list = mutableListOf<Transaction>()
+        val db = dbHelper.readableDatabase
+        val cursor = db.query(
+            DbHelper.TABLE_NAME, null, null, null, null, null,
+            "${DbHelper.COL_DATE} DESC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    Transaction(
+                        id = it.getInt(it.getColumnIndexOrThrow(DbHelper.COL_ID)),
+                        walletId = it.getInt(it.getColumnIndexOrThrow(DbHelper.COL_WALLET_ID)),
+                        amount = it.getDouble(it.getColumnIndexOrThrow(DbHelper.COL_AMOUNT)),
+                        category = it.getString(it.getColumnIndexOrThrow(DbHelper.COL_CATEGORY)),
+                        type = it.getString(it.getColumnIndexOrThrow(DbHelper.COL_TYPE)),
+                        date = it.getLong(it.getColumnIndexOrThrow(DbHelper.COL_DATE)),
+                        note = it.getString(it.getColumnIndexOrThrow(DbHelper.COL_NOTE))
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    /** Hapus SEMUA data lokal (wallets + transactions), dipakai sebelum restore dari cloud */
+    fun clearAllData() {
+        val db = dbHelper.writableDatabase
+        db.delete(DbHelper.TABLE_NAME, null, null)
+        db.delete(DbHelper.TABLE_WALLETS, null, null)
+    }
+
+    /** Insert dompet dengan ID tertentu (dipakai pas restore, biar ID-nya sama kayak backup) */
+    fun insertWalletWithId(id: Int, name: String) {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(DbHelper.COL_WALLET_PK, id)
+            put(DbHelper.COL_WALLET_NAME, name)
+        }
+        db.insertWithOnConflict(DbHelper.TABLE_WALLETS, null, values, android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    /** Insert transaksi dengan ID tertentu (dipakai pas restore) */
+    fun insertTransactionWithId(transaction: Transaction) {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(DbHelper.COL_ID, transaction.id)
+            put(DbHelper.COL_WALLET_ID, transaction.walletId)
+            put(DbHelper.COL_AMOUNT, transaction.amount)
+            put(DbHelper.COL_CATEGORY, transaction.category)
+            put(DbHelper.COL_TYPE, transaction.type)
+            put(DbHelper.COL_DATE, transaction.date)
+            put(DbHelper.COL_NOTE, transaction.note)
+        }
+        db.insertWithOnConflict(DbHelper.TABLE_NAME, null, values, android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
     // ---- Dompet ----
 
     fun getAllWallets(): List<Wallet> {
